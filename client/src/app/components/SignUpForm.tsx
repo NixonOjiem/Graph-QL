@@ -36,6 +36,7 @@ export default function SignupForm() {
       });
       if (typeof window !== "undefined") {
         localStorage.setItem("token", data.localSignup.token);
+        window.location.href = "/";
         console.log("Signup successful!", data.localSignup.user);
       }
     } catch (err) {
@@ -51,6 +52,8 @@ export default function SignupForm() {
           <Image
             src="/signup-vector.svg"
             alt="Signup illustration"
+            width={80}
+            height={80}
             className="w-20 h-20"
           />
         </div>

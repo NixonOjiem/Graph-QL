@@ -1,4 +1,4 @@
-import React from "react";
+"use client";
 import SignUpForm from "../components/SignUpForm";
 
 function page() {

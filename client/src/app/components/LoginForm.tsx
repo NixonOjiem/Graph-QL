@@ -32,6 +32,7 @@ export default function LoginForm() {
       });
 
       localStorage.setItem("token", data.login.token);
+      window.location.href = "/";
       console.log("Login successful!", data.login.user);
     } catch (err) {
       console.error("Login error:", err);
