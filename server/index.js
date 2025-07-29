@@ -8,8 +8,18 @@ const { pool, testDbConnection } = require("./config/database"); // Import from 
 
 //import Appolo server, JWT, graphql dependencies
 const { ApolloServer } = require("apollo-server-express");
-const { typeDefs } = require("./graphql/schema/user.schema");
-const { resolvers } = require("./graphql/resolvers/user.resolvers");
+const { typeDefs: userTypeDefs } = require("./graphql/schema/user.schema");
+const {
+  resolvers: userResolvers,
+} = require("./graphql/resolvers/user.resolvers");
+
+const { countryTypeDefs } = require("./graphql/schema/coutry.schema");
+const { countryResolvers } = require("./graphql/resolvers/country.resolver");
+const { mergeTypeDefs } = require("@graphql-tools/merge");
+const { mergeResolvers } = require("@graphql-tools/merge");
+const typeDefs = mergeTypeDefs([userTypeDefs, countryTypeDefs]);
+const resolvers = mergeResolvers([userResolvers, countryResolvers]);
+
 const jwt = require("jsonwebtoken");
 
 // 2. Use process.env to access your server environment variables
@@ -35,6 +45,7 @@ app.get("/", (req, res) => {
 
 console.log("TypeDefs:", typeDefs ? "Loaded" : "MISSING");
 console.log("Resolvers:", resolvers ? "Loaded" : "MISSING");
+
 // 5. Set up Apollo Server with GraphQL schema and resolvers
 const apolloServer = new ApolloServer({
   typeDefs,
@@ -42,7 +53,7 @@ const apolloServer = new ApolloServer({
   context: ({ req }) => {
     // Extract token from Authorization header
     const token = req.headers.authorization || "";
-
+    let userId = null;
     try {
       // Verify JWT and extract user ID
       if (token) {
@@ -55,7 +66,7 @@ const apolloServer = new ApolloServer({
     }
 
     // Return context without userId if not authenticated
-    return { userId: null };
+    return { userId };
   },
 });
 
