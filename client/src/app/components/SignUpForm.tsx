@@ -1,5 +1,6 @@
 "use client";
 import { useMutation, gql } from "@apollo/client";
+import Image from "next/image";
 
 const LOCAL_SIGNUP_MUTATION = gql`
   mutation LocalSignup($input: LocalSignupInput!) {
@@ -47,7 +48,7 @@ export default function SignupForm() {
       <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-xl border border-gray-200">
         {/* Optional vector image */}
         <div className="flex justify-center mb-6">
-          <img
+          <Image
             src="/signup-vector.svg"
             alt="Signup illustration"
             className="w-20 h-20"

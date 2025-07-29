@@ -58,7 +58,7 @@ const resolvers = {
 
     googleSignup: async (_, { input }) => {
       // Check if user exists
-      const [existing] = await db.query(
+      const [existing] = await pool.query(
         "SELECT id FROM users WHERE provider_id = ?",
         [input.providerId]
       );
@@ -76,7 +76,7 @@ const resolvers = {
       );
 
       // Get created user
-      const [user] = await db.query(
+      const [user] = await pool.query(
         `SELECT 
           id, 
           full_name AS fullName,
@@ -95,7 +95,7 @@ const resolvers = {
 
     login: async (_, { input }) => {
       // Find user by email
-      const [users] = await db.query(
+      const [users] = await pool.query(
         `SELECT 
           id, 
           password,
@@ -136,7 +136,7 @@ const resolvers = {
     me: async (_, __, context) => {
       if (!context.userId) return null;
 
-      const [users] = await db.query(
+      const [users] = await pool.query(
         `SELECT 
           id, 
           full_name AS fullName,
