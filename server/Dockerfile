@@ -1,30 +1,24 @@
-# server/Dockerfile
-
-# Use a base Node.js image for your server
 FROM node:18-alpine
 
-# Set the working directory inside the container for the server
+# Your application's root directory inside the container
 WORKDIR /app/server
 
-# Copy package.json and package-lock.json from the server directory first
-# This ensures npm install runs efficiently and is cached
+# Copy package.json and package-lock.json first
+# This allows Docker to cache npm install if package.json doesn't change
 COPY server/package*.json ./
+# COPY server/package.json ./
+# COPY server/package-lock.json ./
 
-# Install Node.js dependencies for the server
+# Install dependencies
 RUN npm install
 
 # Copy the rest of your server application code
-COPY server/. .
+# This copies contents of D:\Development\graphql\server to /app/server
+COPY server/ .
 
-# If you have a build step for your server (e.g., TypeScript compilation)
-# RUN npm run build
-
-# Expose the port your server listens on (e.g., 4000 for GraphQL API)
+# Expose the port (optional, but good practice for clarity)
 EXPOSE 3001
 
-# Command to start your server
-# Adjust this based on your server's entry point (e.g., app.js, index.js, or a start script)
-# Assuming your main server file is in server/src/index.js
-CMD ["node", "server/src/index.js"]
-# Or if you have a start script in server/package.json:
-# CMD ["npm", "start"]
+# Command to run your application
+# Assuming your main server file is /app/server/src/index.js
+CMD ["node", "index.js"]

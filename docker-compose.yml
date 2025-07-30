@@ -4,7 +4,7 @@ services:
   server:
     build:
       context: .
-      dockerfile: ./server/Dockerfile
+      dockerfile: server/Dockerfile
     container_name: graphql-server
     ports:
       - "3002:3001"
@@ -20,14 +20,14 @@ services:
       - db
     # Volumes for development (optional, but highly recommended for hot-reloading)
     # Remove these volumes for production builds if you prefer completely isolated containers
-    volumes:
-      - ./server:/app/server
-      - /app/server/node_modules # Anonymous volume to prevent host's node_modules from overriding container's
+    # volumes:
+    #  - ./server:/app/server
+    #  - /app/server/node_modules # Anonymous volume to prevent host's node_modules from overriding container's
 
   client:
     build:
       context: .
-      dockerfile: ./client/Dockerfile
+      dockerfile: client/Dockerfile
     container_name: graphql-client
     ports:
       - "3003:3000"
@@ -40,9 +40,9 @@ services:
       - server
     # Volumes for development (optional, but highly recommended)
     # Remove these volumes for production builds
-    volumes:
-      - ./client:/app/client
-      - /app/client/node_modules # Anonymous volume for client's node_modules
+    #volumes:
+    #  - ./client:/app/client
+    #  - /app/client/node_modules # Anonymous volume for client's node_modules
 
   db:
     image: mysql:8.0
