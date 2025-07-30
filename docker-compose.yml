@@ -5,45 +5,45 @@
 services:
   server:
     build:
-      context: .           # Build context is the root (D:\Development\graphql)
-      dockerfile: ./server/Dockerfile # Specify the path to the server's Dockerfile
+      context: .
+      dockerfile: ./server/Dockerfile
     container_name: graphql-server
     ports:
-      - "3001:3001"       # Map host port 4000 to container port 4000 (common for GraphQL APIs)
+      - "3001:3001"
     environment:
       NODE_ENV: production
-      PORT: 3001           # Ensure your server actually listens on this port
-      DB_HOST: db          # 'db' is the service name for your database in this compose file
+      PORT: 3001
+      DB_HOST: db
       DB_USER: root
-      DB_PASSWORD: root # Use rootpassword from db service, not 'root'
-      DB_NAME: myapp       # Use myapp from db service, not 'test_graphql'
+      DB_PASSWORD: root # This is correct for your local environment
+      DB_NAME: test_graphql # <--- CRITICAL CHANGE: Changed from 'myapp' to 'test_graphql'
       JWT_SECRET: ec7d0d2b3686ae44aeb33a68fba008331bb2547be584c1b975e209701e59363d019980d8a1f6dc4b97eaa2dd6d19f0b20d6f514281b2ef47f59261f8548c0fd3
     depends_on:
-      - db                # Server depends on the database
+      - db
     # Volumes for development (optional, but highly recommended for hot-reloading)
     # Remove these volumes for production builds if you prefer completely isolated containers
     volumes:
-      - ./server:/app/server     # Mount the host server code into the container
+      - ./server:/app/server
       - /app/server/node_modules # Anonymous volume to prevent host's node_modules from overriding container's
 
   client:
     build:
-      context: .           # Build context is the root (D:\Development\graphql)
-      dockerfile: ./client/Dockerfile # Specify the path to the client's Dockerfile
+      context: .
+      dockerfile: ./client/Dockerfile
     container_name: graphql-client
     ports:
-      - "3000:3000"       # Map host port 3000 to container port 3000 (Next.js default)
+      - "3000:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
       # This is crucial: client needs to know how to reach the server *inside* the Docker network
       NEXT_PUBLIC_GRAPHQL_ENDPOINT: http://server:3001/graphql # 'server' is the service name
     depends_on:
-      - server            # Client depends on the server
+      - server
     # Volumes for development (optional, but highly recommended)
     # Remove these volumes for production builds
     volumes:
-      - ./client:/app/client     # Mount the host client code into the container
+      - ./client:/app/client
       - /app/client/node_modules # Anonymous volume for client's node_modules
 
   db:
@@ -51,12 +51,12 @@ services:
     container_name: mysql-db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root # Consistent password here
-      MYSQL_DATABASE: myapp           # Consistent database name here
+      MYSQL_ROOT_PASSWORD: root # This is correct for your local environment
+      MYSQL_DATABASE: test_graphql # <--- CRITICAL CHANGE: Changed from 'myapp' to 'test_graphql'
     ports:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql # Persist database data
 
 volumes:
-  mysql-data: # Define the named volume for database persistence
+  mysql-data:

@@ -1,9 +1,19 @@
-# Ignore node_modules and other unnecessary files
-node_modules
-npm-debug.log
-Dockerfile
-.dockerignore
+# .dockerignore at D:\Development\graphql\
+
+# General ignores
 .git
 .gitignore
-.next
-.next/cache
+npm-debug.log
+# Note: Dockerfile and docker-compose.yml are generally not ignored as they define the build
+
+# Ignore node_modules from both client and server *during the build context transfer*
+# We want npm install to run INSIDE the container to create OS-appropriate node_modules.
+server/node_modules
+client/node_modules
+
+# Ignore client-specific build outputs/caches
+client/.next
+client/.next/cache
+
+# Ignore server-specific build outputs/caches (if any)
+# server/dist # Example if you compile TypeScript to a 'dist' folder
