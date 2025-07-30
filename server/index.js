@@ -13,12 +13,19 @@ const {
   resolvers: userResolvers,
 } = require("./graphql/resolvers/user.resolvers");
 
+const { cityResolvers } = require("./graphql/resolvers/city.resolver");
+const { cityTypeDefs } = require("./graphql/schema/city.schema");
+
 const { countryTypeDefs } = require("./graphql/schema/coutry.schema");
 const { countryResolvers } = require("./graphql/resolvers/country.resolver");
 const { mergeTypeDefs } = require("@graphql-tools/merge");
 const { mergeResolvers } = require("@graphql-tools/merge");
-const typeDefs = mergeTypeDefs([userTypeDefs, countryTypeDefs]);
-const resolvers = mergeResolvers([userResolvers, countryResolvers]);
+const typeDefs = mergeTypeDefs([userTypeDefs, countryTypeDefs, cityTypeDefs]);
+const resolvers = mergeResolvers([
+  userResolvers,
+  countryResolvers,
+  cityResolvers,
+]);
 
 const jwt = require("jsonwebtoken");
 

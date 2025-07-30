@@ -9,6 +9,10 @@ const cityTypeDefs = gql`
     area_km2: Float
     created_at: String
   }
+  type Query {
+    cities: [City!]!
+    city(id: ID!): City!
+  }
 `;
 
 module.exports = { cityTypeDefs };
