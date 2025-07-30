@@ -1,6 +1,33 @@
 "use client";
+import React from "react"; // Import React to access React.FormEvent
 import { useMutation, gql } from "@apollo/client";
 import Image from "next/image";
+
+// 1. Define interfaces for your GraphQL types
+interface User {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
+interface LocalSignupResponse {
+  localSignup: {
+    token: string;
+    user: User;
+  };
+}
+
+interface LocalSignupInput {
+  fullName: string;
+  email: string;
+  password: string;
+  phone?: string; // Optional based on your form/schema
+  location?: string; // Optional based on your form/schema
+}
+
+interface LocalSignupMutationVariables {
+  input: LocalSignupInput;
+}
 
 const LOCAL_SIGNUP_MUTATION = gql`
   mutation LocalSignup($input: LocalSignupInput!) {
@@ -16,31 +43,43 @@ const LOCAL_SIGNUP_MUTATION = gql`
 `;
 
 export default function SignupForm() {
-  const [signup, { loading, error }] = useMutation(LOCAL_SIGNUP_MUTATION);
+  // 2. Apply types to useMutation hook
+  const [signup, { loading, error }] = useMutation<
+    LocalSignupResponse,
+    LocalSignupMutationVariables
+  >(LOCAL_SIGNUP_MUTATION);
 
-  const handleSubmit = async (e) => {
+  // 3. Explicitly type the 'e' parameter
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.currentTarget); // Use currentTarget for form events
 
     try {
       const { data } = await signup({
         variables: {
           input: {
-            fullName: formData.get("fullName"),
-            email: formData.get("email"),
-            password: formData.get("password"),
-            phone: formData.get("phone"),
-            location: formData.get("location"),
+            fullName: formData.get("fullName") as string,
+            email: formData.get("email") as string,
+            password: formData.get("password") as string,
+            phone: formData.get("phone") as string, // Cast to string
+            location: formData.get("location") as string, // Cast to string
           },
         },
       });
-      if (typeof window !== "undefined") {
+
+      // 4. Add a null/undefined check for 'data'
+      if (data && data.localSignup && typeof window !== "undefined") {
         localStorage.setItem("token", data.localSignup.token);
-        window.location.href = "/";
+        window.location.href = "/"; // Redirect after successful signup
         console.log("Signup successful!", data.localSignup.user);
+      } else {
+        console.error("Signup failed: Unexpected empty data response.");
+        // You might want to display a more specific error message to the user here
       }
     } catch (err) {
       console.error("Signup error:", err);
+      // Apollo errors will typically fall here
+      // You can refine this to check for err.message or specific GraphQL errors
     }
   };
 
@@ -138,7 +177,8 @@ export default function SignupForm() {
           </button>
           {error && (
             <p className="text-sm text-red-500 mt-2">
-              Signup failed. Please try again.
+              Signup failed. Please try again. {error.message}{" "}
+              {/* Show error message for debugging */}
             </p>
           )}
         </form>
