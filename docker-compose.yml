@@ -1,6 +1,4 @@
 # docker-compose.yml
-# You can remove the 'version' attribute for cleaner syntax with Docker Compose V2
-# version: "3.9" # This line can be removed as per the warning you received previously
 
 services:
   server:
@@ -9,7 +7,7 @@ services:
       dockerfile: ./server/Dockerfile
     container_name: graphql-server
     ports:
-      - "3001:3001"
+      - "3002:3001"
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -32,7 +30,7 @@ services:
       dockerfile: ./client/Dockerfile
     container_name: graphql-client
     ports:
-      - "3000:3000"
+      - "3003:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -54,7 +52,7 @@ services:
       MYSQL_ROOT_PASSWORD: root # This is correct for your local environment
       MYSQL_DATABASE: test_graphql # <--- CRITICAL CHANGE: Changed from 'myapp' to 'test_graphql'
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql # Persist database data
 
