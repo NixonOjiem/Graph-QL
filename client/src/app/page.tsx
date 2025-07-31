@@ -1,10 +1,11 @@
 "use client";
 import LandingComponent from "./components/LandingComponent";
-
+import GetCity from "./components/GetCity";
 export default function Home() {
   return (
     <div>
-      <LandingComponent />
+      {/* <LandingComponent /> */}
+      <GetCity />
     </div>
   );
 }
