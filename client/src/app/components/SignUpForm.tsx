@@ -21,8 +21,8 @@ interface LocalSignupInput {
   fullName: string;
   email: string;
   password: string;
-  phone?: string; // Optional based on your form/schema
-  location?: string; // Optional based on your form/schema
+  phone?: string; // Optional based on form/schema
+  location?: string; // Optional based form/schema
 }
 
 interface LocalSignupMutationVariables {
@@ -75,6 +75,7 @@ export default function SignupForm() {
       } else {
         console.error("Signup failed: Unexpected empty data response.");
         // You might want to display a more specific error message to the user here
+        window.location.href = "/";
       }
     } catch (err) {
       console.error("Signup error:", err);
