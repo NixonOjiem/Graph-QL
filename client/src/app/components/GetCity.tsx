@@ -3,6 +3,18 @@
 import React from "react";
 import { gql, useQuery } from "@apollo/client";
 
+interface city {
+  id: string;
+  name: string;
+  population: number;
+  country: country | null;
+}
+
+interface country {
+  name: string;
+  continent: string;
+}
+
 const GET_CITIES = gql`
   query {
     cities {
@@ -27,7 +39,7 @@ function GetCity() {
     <div className="p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4 text-red-600">🌍 City Data</h2>
       <ul className="space-y-4">
-        {data.cities.map((city, index) => (
+        {data.cities.map((city: city, index: number) => (
           <li key={index} className="border border-black p-4 rounded-md">
             <h3 className="text-xl font-semibold text-black">{city.name}</h3>
             <p className="text-sm text-gray-700">

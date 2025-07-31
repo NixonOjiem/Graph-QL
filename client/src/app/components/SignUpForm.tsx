@@ -70,6 +70,7 @@ export default function SignupForm() {
       // 4. Add a null/undefined check for 'data'
       if (data && data.localSignup && typeof window !== "undefined") {
         localStorage.setItem("token", data.localSignup.token);
+        console.log(data.localSignup.token);
         window.location.href = "/"; // Redirect after successful signup
         console.log("Signup successful!", data.localSignup.user);
       } else {

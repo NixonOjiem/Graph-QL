@@ -63,7 +63,7 @@ export default function LoginForm() {
       if (data && data.login && typeof window !== "undefined") {
         localStorage.setItem("token", data.login.token);
         window.location.href = "/";
-        console.log("Login successful!", data.login.user);
+        console.log("Login successful!", localStorage.token);
       } else {
         console.error("Login failed: Unexpected empty data response.");
       }
