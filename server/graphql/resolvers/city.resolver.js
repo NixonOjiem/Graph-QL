@@ -1,41 +1,86 @@
+// C:\Users\loveh\server\graphql\resolvers\city.resolver.js
+
 const { pool } = require("../../config/database");
 
 const cityResolvers = {
   Query: {
+    // This resolver is correct and uses Redis caching
     cities: async (_, args, { redisClient }) => {
-      // 1. Define a unique key for the list of cities in Redis
-      const redisKey = `all-cities`; // 2. Try to get the list of cities from the Redis cache
+      const redisKey = `all-cities`;
+      console.log("Started to fetch cities");
 
-      try {
-        const cachedCities = await redisClient.get(redisKey);
-        if (cachedCities) {
-          console.log(`All cities data from Redis cache.`);
-          return JSON.parse(cachedCities); // Parse the JSON string back into an array
+      // 1. Add connection check with timeout
+      if (redisClient && redisClient.isReady) {
+        console.log("Redis client is ready");
+        try {
+          // Add timeout for Redis get operation
+          const cachedCities = await Promise.race([
+            redisClient.get(redisKey),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Redis timeout")), 1500)
+            ),
+          ]);
+
+          if (cachedCities) {
+            console.log(`All cities data from Redis cache.`);
+            return JSON.parse(cachedCities);
+          }
+        } catch (err) {
+          console.error("Redis cache error:", err.message);
         }
-      } catch (err) {
-        console.error("Redis cache error:", err); // Fallback to the database if there's a Redis issue
-      } // 3. If no cache hit, fetch the data from the MySQL database
+      } else {
+        console.log("Redis client not available or not ready");
+      }
 
-      console.log(`All cities not in cache. Fetching from database...`);
-      const [rows] = await pool.query("SELECT * FROM city");
-      const cities = rows; // 4. Store the list in the Redis cache with an expiration time
+      console.log(`Fetching cities from database...`);
+      try {
+        const [rows] = await pool.query("SELECT * FROM city");
+        console.log(`Fetched ${rows.length} cities from database`);
 
-      if (cities && cities.length > 0) {
-        // `JSON.stringify` converts the array of objects to a string
-        // 'EX' sets an expiration time (e.g., 600 = 10 minutes)
-        await redisClient.set(redisKey, JSON.stringify(cities), "EX", 600);
-        console.log(`All cities data stored in Redis cache.`);
-      } // 5. Return the list of cities
-
-      return cities;
+        // 2. Only cache if Redis is ready
+        if (redisClient && redisClient.isReady && rows.length > 0) {
+          try {
+            await redisClient.set(redisKey, JSON.stringify(rows), "EX", 600);
+            console.log(`Cities cached in Redis`);
+          } catch (setErr) {
+            console.error("Failed to cache cities:", setErr.message);
+          }
+        }
+        return rows;
+      } catch (dbErr) {
+        console.error("Database query failed:", dbErr.message);
+        throw new Error("Failed to fetch cities");
+      }
     },
 
-    city: async (_, { id }) => {
+    // This resolver is now corrected to use Redis caching
+    city: async (_, { id }, { redisClient }) => {
+      // <-- CORRECTED: Added { redisClient }
+      const redisKey = `city:${id}`;
+
+      try {
+        const cachedCity = await redisClient.get(redisKey);
+        if (cachedCity) {
+          console.log(`City ID ${id} data from Redis cache.`);
+          return JSON.parse(cachedCity);
+        }
+      } catch (err) {
+        console.error("Redis cache error:", err);
+      }
+
+      console.log(`City ID ${id} not in cache. Fetching from database...`);
       const [rows] = await pool.query("SELECT * FROM city WHERE id = ?", [id]);
-      return rows[0] || null;
+      const city = rows[0] || null;
+
+      if (city) {
+        await redisClient.set(redisKey, JSON.stringify(city), "EX", 3600);
+        console.log(`City ID ${id} data stored in Redis cache.`);
+      }
+      return city;
     },
   },
   City: {
+    // This is a separate resolver for a nested field, so it has its own logic
     country: async (parent) => {
       if (!parent.country_id) {
         return null;

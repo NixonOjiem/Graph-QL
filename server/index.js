@@ -78,9 +78,24 @@ const apolloServer = new ApolloServer({
   },
 });
 
+// BEFORE starting servers
+async function checkRedisConnection() {
+  const maxAttempts = 5;
+  for (let i = 0; i < maxAttempts; i++) {
+    if (redisClient.isConnected()) return true;
+    console.log(`Waiting for Redis (attempt ${i + 1}/${maxAttempts})...`);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error("Redis connection failed after retries");
+}
+
 // Apply Apollo Server middleware to the Express app and Start the server
+
 async function startServers() {
   try {
+    // Wait for Redis connection
+    await checkRedisConnection();
+
     // Start Apollo Server
     await apolloServer.start();
 
@@ -89,9 +104,9 @@ async function startServers() {
 
     // Start Express server
     app.listen(port, hostname, () => {
-      console.log(`Express Server running at http://${hostname}:${port}/`);
+      console.log(`🚀 Express Server running at http://${hostname}:${port}/`);
       console.log(
-        `GraphQL endpoint: http://${hostname}:${port}${apolloServer.graphqlPath}`
+        `🚀 GraphQL endpoint: http://${hostname}:${port}${apolloServer.graphqlPath}`
       );
       console.log(`Database Host: ${process.env.DB_HOST}`);
       console.log(`Database Name: ${process.env.DB_NAME}`);
@@ -100,7 +115,7 @@ async function startServers() {
       testDbConnection();
     });
   } catch (error) {
-    console.error("Failed to start servers:", error);
+    console.error("❌Failed to start servers:", error);
     process.exit(1);
   }
 }
