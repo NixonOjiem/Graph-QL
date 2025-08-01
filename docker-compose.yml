@@ -35,7 +35,8 @@ services:
       NODE_ENV: production
       PORT: 3000
       # This is crucial: client needs to know how to reach the server *inside* the Docker network
-      NEXT_PUBLIC_GRAPHQL_ENDPOINT: http://server:3001/graphql # 'server' is the service name
+      GRAPHQL_ENDPOINT_SERVER: http://server:3001/graphql # 'server' is the service name
+      NEXT_PUBLIC_GRAPHQL_ENDPOINT: http://localhost:3002/graphql # 
     depends_on:
       - server
     # Volumes for development (optional, but highly recommended)
