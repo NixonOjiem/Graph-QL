@@ -28,6 +28,7 @@ const resolvers = mergeResolvers([
 ]);
 
 const jwt = require("jsonwebtoken");
+const redisClient = require("./lib/redisClient");
 
 // 2. Use process.env to access your server environment variables
 const hostname = process.env.HOSTNAME || "127.0.0.1";
@@ -65,7 +66,7 @@ const apolloServer = new ApolloServer({
       // Verify JWT and extract user ID
       if (token) {
         const decoded = jwt.verify(token.replace("Bearer ", ""), JWT_SECRET);
-        return { userId: decoded.userId };
+        userId = decoded.userId;
       }
     } catch (error) {
       console.error("JWT verification error:", error.message);
@@ -73,7 +74,7 @@ const apolloServer = new ApolloServer({
     }
 
     // Return context without userId if not authenticated
-    return { userId };
+    return { userId, redisClient };
   },
 });
 
