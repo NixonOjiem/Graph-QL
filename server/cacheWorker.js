@@ -1,77 +1,83 @@
-// 1. Load environment variables
 require("dotenv").config();
-
-// 2. Import your existing database pool and Redis client
 const { pool } = require("./config/database");
 const redisClient = require("./lib/redisClient");
 
-// 3. Define the main caching function
-async function warmUpCache() {
-  console.log("🔥 Starting cache warming process...");
-
-  try {
-    console.log("Attempting to get a connection from the pool...");
-    const connection = await pool.getConnection();
-    console.log("✅ Database connection successful for worker!");
-    connection.release(); // Always release the connection back to the pool
-  } catch (err) {
-    console.error(
-      "❌ Worker failed to get a database connection:",
-      err.message
+// Timeout helper function
+function promiseTimeout(ms, promise, description) {
+  const timeout = new Promise((_, reject) => {
+    setTimeout(
+      () => reject(new Error(`Timeout after ${ms}ms for ${description}`)),
+      ms
     );
-    // Stop the function if we can't connect
-    return;
-  }
+  });
+  return Promise.race([promise, timeout]);
+}
+
+async function warmUpCache() {
+  console.log("🔥 Starting cache warming...");
+  let connection;
 
   try {
-    // --- Cache all countries ---
-    const countriesKey = "all-countries";
-    console.log("🔍 Fetching all countries from database...");
-    const [countries] = await pool.query({
-      sql: "SELECT id, name, code, continent, population, gdp, flag_url AS flagUrl, created_at AS createdAt FROM countries",
-      timeout: 300, // 3 seconds
-    });
+    connection = await pool.getConnection();
+    console.log("✅ DB connection acquired");
 
+    // Cache countries
+    const countriesKey = "all-countries";
+    console.log("🔍 Fetching countries...");
+    const [countries] = await connection.query({
+      sql: "SELECT id, name, code, continent, population, gdp, flag_url AS flagUrl, created_at AS createdAt FROM countries",
+      timeout: 3000, // 3 seconds
+    });
+    console.log(
+      `Countries JSON size: ${Buffer.byteLength(
+        JSON.stringify(countries)
+      )} bytes`
+    );
     console.log(`✅ Fetched ${countries.length} countries`);
 
     if (countries.length > 0) {
-      console.log(`Setting the countries to the required key`);
-
       try {
-        await Promise.race([
-          redisClient.set(countriesKey, JSON.stringify(countries), "EX", 3600), //expire after 1hr
-          timeout(5000, "Redis SET countriesKey"), // 5-second timeout for this operation
-        ]);
-
-        console.log(
-          `✅ Cached ${countries.length} countries under key: ${countriesKey}`
+        await promiseTimeout(
+          5000,
+          redisClient.set(countriesKey, JSON.stringify(countries), "EX", 3600),
+          "Caching countries"
         );
+        console.log(`✅ Cached countries`);
       } catch (error) {
-        console.error(
-          `❌ Failed to cache countries to Redis: ${error.message}`
-        );
-        // You can choose to throw the error or just log and continue
+        console.error(`❌ Country caching failed: ${error.message}`);
       }
     }
 
-    // --- Cache all cities ---
+    // Cache cities
     const citiesKey = "all-cities";
-    console.log("🔍 Fetching all cities from database...");
-    const [cities] = await pool.query("SELECT * FROM city");
+    console.log("🔍 Fetching cities...");
+    const [cities] = await connection.query({
+      sql: "SELECT * FROM city",
+      timeout: 5000,
+    });
+    console.log(
+      `Cities JSON size: ${Buffer.byteLength(JSON.stringify(cities))} bytes`
+    );
+    console.log(`✅ Fetched ${cities.length} cities`);
 
     if (cities.length > 0) {
-      await redisClient.set(citiesKey, JSON.stringify(cities), "EX", 3600); // Cache for 1 hour
-      console.log(`✅ Cached ${cities.length} cities under key: ${citiesKey}`);
+      try {
+        await promiseTimeout(
+          5000,
+          redisClient.set(citiesKey, JSON.stringify(cities), "EX", 3600),
+          "Caching cities"
+        );
+        console.log(`✅ Cached cities`);
+      } catch (error) {
+        console.error(`❌ City caching failed: ${error.message}`);
+      }
     }
 
-    // You can add more caching logic for other data here...
-
-    console.log("🎉 Cache warming process completed successfully!");
+    console.log("🎉 Cache warming completed!");
   } catch (error) {
-    console.error(
-      "❌ An error occurred during the cache warming process:",
-      error
-    );
+    console.error("❌ Cache warming error:", error);
+  } finally {
+    if (connection) connection.release();
   }
 }
 
