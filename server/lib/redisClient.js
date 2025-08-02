@@ -1,30 +1,21 @@
+// lib/redisClient.js
+
 const { createClient } = require("redis");
 
+// ⚙️ Create the client with your desired configuration
 const redisClient = createClient({
   url: "redis://localhost:6379",
   socket: {
+    // This reconnect strategy is good to keep
     reconnectStrategy: (retries) => Math.min(retries * 100, 3000),
   },
 });
 
-// Improved connection handling
-let isConnected = false;
-redisClient.on("connect", () => {
-  console.log("Redis client connected on localhost:6379");
-  isConnected = true;
-});
+// ✅ It's still useful to log any errors that might occur
 redisClient.on("error", (err) => console.log("Redis Client Error", err));
-redisClient.on("end", () => (isConnected = false));
 
-(async () => {
-  try {
-    await redisClient.connect();
-  } catch (err) {
-    console.error("Redis connection failed:", err);
-  }
-})();
+// ❌ DO NOT connect here.
+// ❌ REMOVE the custom isConnected flag and the IIFE.
 
-// Add connection check method
-redisClient.isConnected = () => isConnected;
-
+// ✅ Export the configured, but unconnected, client instance.
 module.exports = redisClient;
