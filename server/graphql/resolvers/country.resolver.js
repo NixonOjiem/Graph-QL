@@ -2,164 +2,160 @@
 
 const { pool } = require("../../config/database");
 
+/**
+ * A helper function to create a timeout promise.
+ * @param {number} ms - Timeout in milliseconds.
+ * @returns {Promise<never>} A promise that rejects after the timeout.
+ */
+const redisTimeout = (ms) =>
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error("Redis operation timed out")), ms)
+  );
+
 const countryResolvers = {
   Query: {
-    countries: async (_, args, { redisClient }) => {
+    // Corrected to handle caching consistently
+    countries: async (_, __, { redisClient }) => {
       const redisKey = `all-countries`;
-      console.log("Started fetching countries");
 
       if (redisClient && redisClient.isReady) {
-        console.log("Redis client is ready");
-
         try {
-          const redisFetch = redisClient.get(redisKey);
-
           const cachedCountries = await Promise.race([
-            redisFetch,
-            new Promise((_, reject) =>
-              setTimeout(() => {
-                console.warn("Redis get operation timed out");
-                reject(new Error("Redis timeout"));
-              }, 1500)
-            ),
+            redisClient.get(redisKey),
+            redisTimeout(1500),
           ]);
-
           if (cachedCountries) {
-            console.log("Countries data from Redis cache.");
+            console.log("✅ All countries data from Redis cache.");
             return JSON.parse(cachedCountries);
-          } else {
-            console.log("Redis returned null or empty");
           }
-        } catch (error) {
-          console.error("Redis cache error:", error.message);
+        } catch (err) {
+          console.error("🚨 Redis cache error (GET):", err.message);
         }
       } else {
-        console.log("Redis client not available or not ready");
+        console.log("🟡 Redis client not available for 'countries' query.");
       }
 
-      console.log("Fetching countries from database...");
-      const [rows] = await pool.query(`
-    SELECT 
-      id, 
-      name, 
-      code, 
-      continent, 
-      population, 
-      gdp, 
-      flag_url AS flagUrl, 
-      created_at AS createdAt
-    FROM countries
-  `);
-
-      if (redisClient && redisClient.isReady && rows.length > 0) {
-        try {
-          await redisClient.set(redisKey, JSON.stringify(rows), "EX", 600);
-          console.log("Countries cached in Redis");
-        } catch (cacheErr) {
-          console.error("Failed to cache countries:", cacheErr.message);
+      console.log("🔍 Fetching all countries from database...");
+      try {
+        const [rows] = await pool.query(
+          "SELECT id, name, code, continent, population, gdp, flag_url AS flagUrl, created_at AS createdAt FROM countries"
+        );
+        if (redisClient && redisClient.isReady && rows.length > 0) {
+          try {
+            // Set cache with a 10-minute expiry
+            await redisClient.set(redisKey, JSON.stringify(rows), "EX", 600);
+            console.log("💾 All countries data cached in Redis.");
+          } catch (setErr) {
+            console.error("🚨 Redis cache error (SET):", setErr.message);
+          }
         }
+        return rows;
+      } catch (dbErr) {
+        console.error("🚨 Database query failed:", dbErr.message);
+        throw new Error("Failed to fetch countries.");
       }
-
-      return rows;
     },
 
+    // Corrected to handle caching consistently
     countryByCode: async (_, { code }, { redisClient }) => {
       const redisKey = `country-code:${code}`;
 
       if (redisClient && redisClient.isReady) {
         try {
-          const cachedCountry = await redisClient.get(redisKey);
+          const cachedCountry = await Promise.race([
+            redisClient.get(redisKey),
+            redisTimeout(1500),
+          ]);
           if (cachedCountry) {
-            console.log(`Country with code ${code} from Redis cache.`);
+            console.log(`✅ Country [${code}] data from Redis cache.`);
             return JSON.parse(cachedCountry);
           }
         } catch (err) {
-          console.error("Redis cache error:", err.message);
+          console.error("🚨 Redis cache error (GET):", err.message);
         }
+      } else {
+        console.log("🟡 Redis client not available for 'countryByCode' query.");
       }
 
-      console.log(`Fetching country with code ${code} from database...`);
-      const [rows] = await pool.query(
-        `
-        SELECT 
-          id, 
-          name, 
-          code, 
-          continent, 
-          population, 
-          gdp, 
-          flag_url AS flagUrl, 
-          created_at AS createdAt
-        FROM countries
-        WHERE code = ?
-      `,
-        [code]
-      );
+      console.log(`🔍 Fetching country [${code}] from database...`);
+      try {
+        const [rows] = await pool.query(
+          "SELECT id, name, code, continent, population, gdp, flag_url AS flagUrl, created_at AS createdAt FROM countries WHERE code = ?",
+          [code]
+        );
+        const country = rows[0] || null;
 
-      const country = rows[0] || null;
-
-      if (country && redisClient && redisClient.isReady) {
-        try {
-          await redisClient.set(redisKey, JSON.stringify(country), "EX", 3600);
-          console.log(`Country with code ${code} cached in Redis.`);
-        } catch (cacheErr) {
-          console.error("Failed to cache country:", cacheErr.message);
+        if (country && redisClient && redisClient.isReady) {
+          try {
+            // Set cache with a 1-hour expiry
+            await redisClient.set(
+              redisKey,
+              JSON.stringify(country),
+              "EX",
+              3600
+            );
+            console.log(`💾 Country [${code}] data cached in Redis.`);
+          } catch (setErr) {
+            console.error("🚨 Redis cache error (SET):", setErr.message);
+          }
         }
+        return country;
+      } catch (dbErr) {
+        console.error("🚨 Database query failed:", dbErr.message);
+        throw new Error("Failed to fetch country.");
       }
-
-      return country;
     },
 
+    // Corrected to handle caching consistently
     countriesByContinent: async (_, { continent }, { redisClient }) => {
       const redisKey = `countries-continent:${continent}`;
 
       if (redisClient && redisClient.isReady) {
         try {
-          const cachedList = await redisClient.get(redisKey);
+          const cachedList = await Promise.race([
+            redisClient.get(redisKey),
+            redisTimeout(1500),
+          ]);
           if (cachedList) {
             console.log(
-              `Countries from continent ${continent} from Redis cache.`
+              `✅ Countries from continent [${continent}] from Redis cache.`
             );
             return JSON.parse(cachedList);
           }
         } catch (err) {
-          console.error("Redis cache error:", err.message);
+          console.error("🚨 Redis cache error (GET):", err.message);
         }
+      } else {
+        console.log(
+          "🟡 Redis client not available for 'countriesByContinent' query."
+        );
       }
 
       console.log(
-        `Fetching countries from continent ${continent} from database...`
+        `🔍 Fetching countries from continent [${continent}] from database...`
       );
-      const [rows] = await pool.query(
-        `
-        SELECT 
-          id, 
-          name, 
-          code, 
-          continent, 
-          population, 
-          gdp, 
-          flag_url AS flagUrl, 
-          created_at AS createdAt
-        FROM countries
-        WHERE continent = ?
-      `,
-        [continent]
-      );
+      try {
+        const [rows] = await pool.query(
+          "SELECT id, name, code, continent, population, gdp, flag_url AS flagUrl, created_at AS createdAt FROM countries WHERE continent = ?",
+          [continent]
+        );
 
-      if (rows.length > 0 && redisClient && redisClient.isReady) {
-        try {
-          await redisClient.set(redisKey, JSON.stringify(rows), "EX", 1800);
-          console.log(`Countries from continent ${continent} cached in Redis.`);
-        } catch (cacheErr) {
-          console.error(
-            "Failed to cache continent countries:",
-            cacheErr.message
-          );
+        if (rows.length > 0 && redisClient && redisClient.isReady) {
+          try {
+            // Set cache with a 30-minute expiry
+            await redisClient.set(redisKey, JSON.stringify(rows), "EX", 1800);
+            console.log(
+              `💾 Countries from continent [${continent}] cached in Redis.`
+            );
+          } catch (setErr) {
+            console.error("🚨 Redis cache error (SET):", setErr.message);
+          }
         }
+        return rows;
+      } catch (dbErr) {
+        console.error("🚨 Database query failed:", dbErr.message);
+        throw new Error("Failed to fetch countries by continent.");
       }
-
-      return rows;
     },
   },
 };
